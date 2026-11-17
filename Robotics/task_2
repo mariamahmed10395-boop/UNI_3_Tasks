@@ -1,0 +1,62 @@
+#include "DHT.h"
+
+// تعريف منافذ مستشعر DHT11
+#define DHTPIN 2
+#define DHTTYPE DHT11
+
+// تعريف منافذ مستشعر الـ Ultrasonic (HC-SR04)
+#define TRIG_PIN 9
+#define ECHO_PIN 10
+
+DHT dht(DHTPIN, DHTTYPE);
+
+void setup() {
+  Serial.begin(9600);
+
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+
+  dht.begin();
+  Serial.println("System Initialized...");
+}
+
+void loop() {
+  // 1. قراءة درجة الحرارة من DHT11
+  float temperature = dht.readTemperature();
+
+  // التحقق من صحة قراءة الحساس
+  if (isnan(temperature)) {
+    Serial.println("Failed to read from DHT sensor! Using default temp 20°C");
+    temperature = 20.0; // قيمة افتراضية في حالة تعذر القراءة
+  }
+
+  // 2. حساب سرعة الصوت (بوحدة cm / microsecond) بناءً على درجة الحرارة
+  // سرعة الصوت = (331.3 + 0.606 * Temp) m/s
+  // للتحويل إلى cm/us نقسم على 10000
+  float speedOfSound = (331.3 + (0.606 * temperature)) / 10000.0;
+
+  // 3. إرسال نبضة من الـ Ultrasonic
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+
+  // 4. قراءة زمن عودة النبضة (بالمايكرو ثانية)
+  long duration = pulseIn(ECHO_PIN, HIGH);
+
+  // 5. حساب المسافة (المسافة = السرعة × الزمن ÷ 2)
+  float distance = (duration * speedOfSound) / 2.0;
+
+  // 6. طباعة النتائج على الـ Serial Monitor
+  Serial.print("Temperature: ");
+  Serial.print(temperature);
+  Serial.print(" °C | Speed of Sound: ");
+  Serial.print(speedOfSound * 10000.0);
+  Serial.print(" m/s | Distance: ");
+  Serial.print(distance);
+  Serial.println(" cm");
+
+  // تأخير زمني قبل القراءة التالية
+  delay(1000);
+}
